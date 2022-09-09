@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/ren
+ren.so
+ren.dylib
+ren.dll
+ren.a
+ren.lib
+ren-test-*
+*.exe
+*.o
+*.obj
+*.lst
+*.ttf

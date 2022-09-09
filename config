@@ -1,0 +1,11 @@
+commands: [
+	["quit", "killall ren", "Q"],
+	["volume", "kitty alsamixer -c 1", "V"],
+	["brave", "brave-browser", "B"],
+	["gimp", "gimp", "G"],
+	["terminal", "kitty", "T"],
+]
+
+font-size: 24
+window-width: 640
+

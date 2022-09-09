@@ -1,0 +1,8 @@
+name "ren"
+description "Rennen."
+authors "Ren."
+sourcePaths "sauce"
+copyright "Copyright © 2022, Ren."
+license "non"
+dependency "derelict-sdl2" version="~>2.1.4"
+
