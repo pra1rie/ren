@@ -210,16 +210,13 @@ void loadConfigFile(string path, string scancodesPath)
 		if (item.list.length != 3)
 			fail("Invalid command: " ~ item.getObj);
 
-		if (!isNumber(item.list[2].base) && !(item.list[2].base in scancodes)) {
+		if (!isNumber(item.list[2].base) && !(item.list[2].base in scancodes))
 			fail("Invalid key: " ~ item.list[2].base);
-			continue;
-		}
 
 		int key = (item.list[2].base.isNumber)?
 				to!int(item.list[2].base) : scancodes[item.list[2].base];
 
-		ren.cmds ~= Cmd(
-					item.list[0].base, item.list[1].base, key, item.list[2].base);
+		ren.cmds ~= Cmd(item.list[0].base, item.list[1].base, key, item.list[2].base);
 	}
 
 	int w = 640, h = 0;
@@ -245,10 +242,8 @@ void loadConfigFile(string path, string scancodesPath)
 		h = to!int(cfg.vars["window-height"].getObj);
 	}
 
-	if (!h) {
-		h = to!int(ren.fontSize * (cfg.vars["commands"].list.length + space));
-	}
-
+	if (!h)
+		h = to!int(ren.fontSize * (cfg.vars["commands"].list.length-1 + space));
 	ren.windowSize = [w, h];
 }
 
@@ -290,6 +285,8 @@ void main(string[] args)
 	SDL_Init(SDL_INIT_EVERYTHING);
 	TTF_Init();
 	
+	// Error handling? What's that?
+
 	ren.window = SDL_CreateWindow("Rennen",
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			ren.windowSize[0], ren.windowSize[1], SDL_WINDOW_RESIZABLE);
