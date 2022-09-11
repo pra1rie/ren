@@ -11,10 +11,10 @@ import config;
 import derelict.sdl2.sdl;
 import derelict.sdl2.ttf;
 
-
 const string CONFIG_PATH = "config";
 const string SCANCODES_PATH = "scancodes";
 int[string] scancodes;
+
 SDL_Scancode[] ignoredKeys = [
 	SDL_SCANCODE_LSHIFT,
 	SDL_SCANCODE_LCTRL,
@@ -106,6 +106,15 @@ struct Cmd {
 	string key_name;
 }
 
+// uh i could use SDL_Color, right? right?
+struct theme {
+static:
+	ubyte[3] background;
+	ubyte[3] command;
+	ubyte[3] text;
+	ubyte[3] key;
+}
+
 static struct ren {
 static:
 	SDL_Window *window;
@@ -169,27 +178,54 @@ void update()
 	if (getKey(SDL_SCANCODE_ESCAPE))
 		ren.isRunning = false;
 
-	SDL_SetRenderDrawColor(ren.render, 36, 36, 48, 0);
+	SDL_SetRenderDrawColor(ren.render,
+			theme.background[0], theme.background[1], theme.background[2], 0);
 	SDL_RenderClear(ren.render);
 
 	for (int i = 0; i < ren.cmds.length; ++i) {
 		// write key
 		ren.font.writeRight(" [" ~ ren.cmds[i].key_name ~ "] ",
 				[ren.windowSize[0], pos + i * (ren.font.size + space)],
-				[251, 160, 192]);
+				theme.key);
 
 		// write command
 		ren.font.writeRight(ren.cmds[i].cmd,
 				[ren.windowSize[0] - ren.font.rect.w, pos + i * (ren.font.size + space)],
-				[102, 102, 102]);
+				theme.command);
 	
 		// write name
 		ren.font.write(" " ~ ren.cmds[i].name,
 				[0, pos + i * (ren.font.size + space)],
-				[240, 240, 240]);
+				theme.text);
 	}
 
 	SDL_RenderPresent(ren.render);
+}
+
+ubyte[3] getTheme(Obj[string] vars, string key, ubyte[3] res)
+{
+	ubyte[3] color;
+
+	// TODO: maybe support colours in hex as well
+	if (key in vars) {
+		auto col = vars[key];
+		if (col.type != ObjType.LIST || col.list.length < 3) {
+			warn("Invalid color: " ~ col.getObj);
+			return res;
+		}
+		
+		foreach (i; 0..3) {
+			if (!isNumber(col.list[i].getObj)) {
+				warn("Invalid digit: " ~ col.list[i].getObj);
+				return res;
+			}
+
+			color[i] = to!ubyte(col.list[i].getObj);
+		}
+		return color;
+	}
+
+	return res;
 }
 
 void loadConfigFile(string path, string scancodesPath)
@@ -222,6 +258,7 @@ void loadConfigFile(string path, string scancodesPath)
 	int w = 640, h = 0;
 	ren.fontSize = 0;
 
+	// font
 	if ("font-size" in cfg.vars) {
 		if (!isNumber(cfg.vars["font-size"].getObj))
 			fail("Invalid digit: " ~ cfg.vars["font-size"].getObj);
@@ -229,6 +266,13 @@ void loadConfigFile(string path, string scancodesPath)
 		ren.fontSize = to!int(cfg.vars["font-size"].getObj);
 	}
 
+	// colours
+	theme.background = getTheme(cfg.vars, "background-color", [36, 36, 48]);
+	theme.command = getTheme(cfg.vars, "command-color", [102, 102, 102]);
+	theme.text = getTheme(cfg.vars, "text-color", [240, 240, 240]);
+	theme.key = getTheme(cfg.vars, "key-color", [251, 160, 192]);
+
+	// window size
 	if ("window-width" in cfg.vars) {
 		if (!isNumber(cfg.vars["window-width"].getObj))
 			fail("Invalid digit: " ~ cfg.vars["window-width"].getObj);

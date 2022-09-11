@@ -9,3 +9,8 @@ commands: [
 font-size: 24
 window-width: 640
 
+background-color: [36, 36, 48]
+command-color: [102, 102, 102]
+text-color: [240, 240, 240]
+key-color: [251, 160, 192]
+

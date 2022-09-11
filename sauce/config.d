@@ -22,6 +22,10 @@ void fail(string err) {
 	exit(1);
 }
 
+void warn(string err) {
+	stderr.writeln("[WARN] " ~ err);
+}
+
 enum ObjType {
 	NIL,
 	STRING,
