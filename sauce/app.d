@@ -121,10 +121,10 @@ static:
 	SDL_Renderer *render;
 	int[2] windowSize;
 	int fontSize;
+	string fontPath;
 
 	int scroll;
 	int spacing;
-	int offset;
 
 	bool isScrolling;
 	bool isRunning;
@@ -192,7 +192,7 @@ void events()
 				foreach (cmd; ren.cmds) {
 					if (key == cmd.key) {
 						spawnShell(cmd.cmd ~ " &").wait;
-						if (!ren.exitOnKey) {
+						if (ren.exitOnKey) {
 							ren.isRunning = false;
 							quit();
 						}
@@ -221,21 +221,21 @@ void update()
 		ren.font.writeRight(" [" ~ ren.cmds[i].key_name ~ "] ",
 				[
 					ren.windowSize[0],
-					ren.offset + (i - ren.scroll) * (ren.font.size + ren.spacing)
+					ren.spacing + (i - ren.scroll) * (ren.font.size + ren.spacing)
 				], theme.key);
 
 		// write command
 		ren.font.writeRight(ren.cmds[i].cmd,
 				[
 					ren.windowSize[0] - ren.font.rect.w,
-					ren.offset + (i - ren.scroll) * (ren.font.size + ren.spacing)
+					ren.spacing + (i - ren.scroll) * (ren.font.size + ren.spacing)
 				], theme.command);
 	
 		// write name
 		ren.font.write(" " ~ ren.cmds[i].name,
 				[
 					0,
-					ren.offset + (i - ren.scroll) * (ren.font.size + ren.spacing)
+					ren.spacing + (i - ren.scroll) * (ren.font.size + ren.spacing)
 				], theme.text);
 	}
 
@@ -295,32 +295,37 @@ void loadConfigFile(string path, string scancodesPath)
 		ren.cmds ~= Cmd(item.list[0].base, item.list[1].base, key, item.list[2].base);
 	}
 
-	// text positioning
+	// exit on key (on by default)
+	ren.exitOnKey = true;
+	if ("exit-on-key" in cfg.vars) {
+		if (!isNumber(cfg.vars["exit-on-key"].getObj))
+			fail("Invalid digit: " ~ cfg.vars["exit-on-key"].getObj);
+		ren.exitOnKey = (cfg.vars["exit-on-key"].getObj != "0");
+	}
+
+	// text spacing
 	ren.scroll = 0;
 	ren.spacing = 3;
-	ren.offset = 12;
 
 	if ("spacing" in cfg.vars) {
 		if (!isNumber(cfg.vars["spacing"].getObj))
 			fail("Invalid digit: " ~ cfg.vars["spacing"].getObj);
-
 		ren.spacing = to!int(cfg.vars["spacing"].getObj);
-	}
-	if ("offset" in cfg.vars) {
-		if (!isNumber(cfg.vars["offset"].getObj))
-			fail("Invalid digit: " ~ cfg.vars["offset"].getObj);
-
-		ren.offset = to!int(cfg.vars["offset"].getObj);
 	}
 
 	int w = 640, h = 0;
 	ren.fontSize = 0;
+	ren.fontPath = "font.ttf";
 
 	// font
+	if ("font-path" in cfg.vars) {
+		if (cfg.vars["font-path"].type != ObjType.STRING)
+			fail("Invalid string: " ~ cfg.vars["font-path"].getObj);
+		ren.fontPath = cfg.vars["font-path"].base;
+	}
 	if ("font-size" in cfg.vars) {
 		if (!isNumber(cfg.vars["font-size"].getObj))
 			fail("Invalid digit: " ~ cfg.vars["font-size"].getObj);
-
 		ren.fontSize = to!int(cfg.vars["font-size"].getObj);
 	}
 
@@ -334,18 +339,16 @@ void loadConfigFile(string path, string scancodesPath)
 	if ("window-width" in cfg.vars) {
 		if (!isNumber(cfg.vars["window-width"].getObj))
 			fail("Invalid digit: " ~ cfg.vars["window-width"].getObj);
-
 		w = to!int(cfg.vars["window-width"].getObj);
 	}
 	if ("window-height" in cfg.vars) {
 		if (!isNumber(cfg.vars["window-height"].getObj))
 			fail("Invalid digit: " ~ cfg.vars["window-height"].getObj);
-
 		h = to!int(cfg.vars["window-height"].getObj);
 	}
 
 	if (!h)
-		h = to!int(ren.fontSize * (cfg.vars["commands"].list.length-1 + ren.spacing));
+		h = to!int((cfg.vars["commands"].list.length+1) * (ren.fontSize + ren.spacing));
 	ren.windowSize = [w, h];
 }
 
@@ -362,24 +365,11 @@ void main(string[] args)
 {
 	if (args.length < 2) {
 		writeln("Usage:");
-		writeln("  ", args[0], " <flags> <path to config files>");
-		writeln("flags:");
-		writeln("  -q closes program after a key is pressed");
+		writeln("  ", args[0], " <path to config files>");
 		exit(0);
 	}
 	
-	string path;
-	foreach (arg; args[1..$]) {
-		if (arg.length == 0) continue;
-		if (arg[0] == '-') {
-			if (arg == "-q")
-				ren.exitOnKey = true;
-		}
-		else {
-			path = arg;
-		}
-	}
-
+	string path = args[1];
 	loadConfigFile(path ~ "/" ~ CONFIG_PATH, path ~ "/" ~ SCANCODES_PATH);
 
 	DerelictSDL2.load();
@@ -394,7 +384,7 @@ void main(string[] args)
 			ren.windowSize[0], ren.windowSize[1], SDL_WINDOW_RESIZABLE);
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
 	ren.isRunning = true;
-	ren.font = new Font(path ~ "/font.ttf", ren.fontSize);
+	ren.font = new Font(path ~ "/" ~ ren.fontPath, ren.fontSize);
 
 	while (ren.isRunning) {
 		events();

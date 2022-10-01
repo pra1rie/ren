@@ -7,6 +7,9 @@ commands: [
 ]
 
 font-size: 24
+font-path: "JuliaMono.ttf"
+
+exit-on-key: 1
 window-width: 640
 
 background-color: [36, 36, 48]
