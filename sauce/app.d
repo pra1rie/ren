@@ -121,6 +121,12 @@ static:
 	SDL_Renderer *render;
 	int[2] windowSize;
 	int fontSize;
+
+	int scroll;
+	int spacing;
+	int offset;
+
+	bool isScrolling;
 	bool isRunning;
 	bool exitOnKey;
 	Font font;
@@ -151,13 +157,42 @@ void events()
 				}
 				break;
 			}
+			case SDL_MOUSEWHEEL: {
+				ren.scroll -= e.wheel.y;
+				if (ren.scroll < 0) ren.scroll = 0;
+				break;
+			}
+			case SDL_KEYUP: {
+				auto key = e.key.keysym.scancode;
+				if (key == SDL_SCANCODE_LSHIFT)
+					ren.isScrolling = false;
+				break;
+			}
 			case SDL_KEYDOWN: {
 				auto key = e.key.keysym.scancode;
+
+				// scrolling
+				if (key == SDL_SCANCODE_LSHIFT)
+					ren.isScrolling = true;
+
+				if (ren.isScrolling) {
+					if (key == SDL_SCANCODE_DOWN) {
+						++ren.scroll;
+					}
+					if (key == SDL_SCANCODE_UP) {
+						--ren.scroll;
+						if (ren.scroll <= 0)
+							ren.scroll = 0;
+					}
+				}
+
+				// cmd keys
 				if (ignoredKeys.canFind(key)) break;
+
 				foreach (cmd; ren.cmds) {
 					if (key == cmd.key) {
 						spawnShell(cmd.cmd ~ " &").wait;
-						if (ren.exitOnKey) {
+						if (!ren.exitOnKey) {
 							ren.isRunning = false;
 							quit();
 						}
@@ -170,9 +205,6 @@ void events()
 	}
 }
 
-const int pos = 12;
-const int space = 3;
-
 void update()
 {
 	if (getKey(SDL_SCANCODE_ESCAPE))
@@ -181,22 +213,30 @@ void update()
 	SDL_SetRenderDrawColor(ren.render,
 			theme.background[0], theme.background[1], theme.background[2], 0);
 	SDL_RenderClear(ren.render);
+	
+	// TODO: no need to draw outside screen
 
 	for (int i = 0; i < ren.cmds.length; ++i) {
 		// write key
 		ren.font.writeRight(" [" ~ ren.cmds[i].key_name ~ "] ",
-				[ren.windowSize[0], pos + i * (ren.font.size + space)],
-				theme.key);
+				[
+					ren.windowSize[0],
+					ren.offset + (i - ren.scroll) * (ren.font.size + ren.spacing)
+				], theme.key);
 
 		// write command
 		ren.font.writeRight(ren.cmds[i].cmd,
-				[ren.windowSize[0] - ren.font.rect.w, pos + i * (ren.font.size + space)],
-				theme.command);
+				[
+					ren.windowSize[0] - ren.font.rect.w,
+					ren.offset + (i - ren.scroll) * (ren.font.size + ren.spacing)
+				], theme.command);
 	
 		// write name
 		ren.font.write(" " ~ ren.cmds[i].name,
-				[0, pos + i * (ren.font.size + space)],
-				theme.text);
+				[
+					0,
+					ren.offset + (i - ren.scroll) * (ren.font.size + ren.spacing)
+				], theme.text);
 	}
 
 	SDL_RenderPresent(ren.render);
@@ -255,6 +295,24 @@ void loadConfigFile(string path, string scancodesPath)
 		ren.cmds ~= Cmd(item.list[0].base, item.list[1].base, key, item.list[2].base);
 	}
 
+	// text positioning
+	ren.scroll = 0;
+	ren.spacing = 3;
+	ren.offset = 12;
+
+	if ("spacing" in cfg.vars) {
+		if (!isNumber(cfg.vars["spacing"].getObj))
+			fail("Invalid digit: " ~ cfg.vars["spacing"].getObj);
+
+		ren.spacing = to!int(cfg.vars["spacing"].getObj);
+	}
+	if ("offset" in cfg.vars) {
+		if (!isNumber(cfg.vars["offset"].getObj))
+			fail("Invalid digit: " ~ cfg.vars["offset"].getObj);
+
+		ren.offset = to!int(cfg.vars["offset"].getObj);
+	}
+
 	int w = 640, h = 0;
 	ren.fontSize = 0;
 
@@ -287,7 +345,7 @@ void loadConfigFile(string path, string scancodesPath)
 	}
 
 	if (!h)
-		h = to!int(ren.fontSize * (cfg.vars["commands"].list.length-1 + space));
+		h = to!int(ren.fontSize * (cfg.vars["commands"].list.length-1 + ren.spacing));
 	ren.windowSize = [w, h];
 }
 
