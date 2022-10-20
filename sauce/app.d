@@ -381,7 +381,9 @@ void main(string[] args)
 
 	ren.window = SDL_CreateWindow("Rennen",
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-			ren.windowSize[0], ren.windowSize[1], SDL_WINDOW_RESIZABLE);
+			ren.windowSize[0], ren.windowSize[1],
+			SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS);
+	// make sure its focused ~ hopefully that's how it works
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
 	ren.isRunning = true;
 	ren.font = new Font(path ~ "/" ~ ren.fontPath, ren.fontSize);
