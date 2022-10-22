@@ -28,6 +28,7 @@ SDL_Scancode[] ignoredKeys = [
 	SDL_SCANCODE_TAB,
 	SDL_SCANCODE_CAPSLOCK,
 	SDL_SCANCODE_RETURN,
+	SDL_SCANCODE_COMPUTER,
 ];
 
 class Font {
@@ -382,7 +383,10 @@ void main(string[] args)
 	ren.window = SDL_CreateWindow("Rennen",
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			ren.windowSize[0], ren.windowSize[1],
-			SDL_WINDOW_RESIZABLE | SDL_WINDOW_INPUT_FOCUS);
+			SDL_WINDOW_RESIZABLE
+			| SDL_WINDOW_INPUT_FOCUS
+			| SDL_WINDOW_INPUT_GRABBED
+			| SDL_WINDOW_ALWAYS_ON_TOP);
 	// make sure its focused ~ hopefully that's how it works
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
 	ren.isRunning = true;

@@ -6,6 +6,7 @@ import std.conv : to;
 import std.file : exists, isDir, readText;
 import core.stdc.stdlib : exit;
 
+// BETTER THAN JSON LMAO
 
 bool isNumber(string str) {
 	if (str == "") return false;
