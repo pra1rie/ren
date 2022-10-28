@@ -385,7 +385,6 @@ void main(string[] args)
 			ren.windowSize[0], ren.windowSize[1],
 			SDL_WINDOW_RESIZABLE
 			| SDL_WINDOW_INPUT_FOCUS
-			| SDL_WINDOW_INPUT_GRABBED
 			| SDL_WINDOW_ALWAYS_ON_TOP);
 	// make sure its focused ~ hopefully that's how it works
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
