@@ -388,6 +388,8 @@ void main(string[] args)
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
 	ren.font = new Font(path ~ "/" ~ ren.fontPath, ren.fontSize);
 
+	update();
+
 	while (true) {
 		events();
 		SDL_Delay(1000 / FPS);
