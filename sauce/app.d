@@ -128,7 +128,6 @@ static:
 	int spacing;
 
 	bool isScrolling;
-	bool isRunning;
 	bool exitOnKey;
 	Font font;
 	Cmd[] cmds;
@@ -149,7 +148,7 @@ void events()
 	if (SDL_PollEvent(&e)) {
 		switch (e.type) {
 			case SDL_QUIT: {
-				ren.isRunning = false;
+				quit();
 				break;
 			}
 			case SDL_WINDOWEVENT: {
@@ -171,6 +170,8 @@ void events()
 			}
 			case SDL_KEYDOWN: {
 				auto key = e.key.keysym.scancode;
+				if (key == SDL_SCANCODE_ESCAPE)
+					quit();
 
 				// scrolling
 				if (key == SDL_SCANCODE_LSHIFT)
@@ -193,24 +194,21 @@ void events()
 				foreach (cmd; ren.cmds) {
 					if (key == cmd.key) {
 						spawnShell(cmd.cmd ~ " &").wait;
-						if (ren.exitOnKey) {
-							ren.isRunning = false;
+						if (ren.exitOnKey)
 							quit();
-						}
 					}
 				}
 				break;
 			}
 			default: break;
 		}
+		// redraw at every event
+		update();
 	}
 }
 
 void update()
 {
-	if (getKey(SDL_SCANCODE_ESCAPE))
-		ren.isRunning = false;
-
 	SDL_SetRenderDrawColor(ren.render,
 			theme.background[0], theme.background[1], theme.background[2], 0);
 	SDL_RenderClear(ren.render);
@@ -388,14 +386,10 @@ void main(string[] args)
 			| SDL_WINDOW_ALWAYS_ON_TOP);
 	// make sure its focused ~ hopefully that's how it works
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
-	ren.isRunning = true;
 	ren.font = new Font(path ~ "/" ~ ren.fontPath, ren.fontSize);
 
-	while (ren.isRunning) {
+	while (true) {
 		events();
-		update();
 		SDL_Delay(1000 / FPS);
 	}
-
-	quit();
 }
