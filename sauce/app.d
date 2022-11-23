@@ -133,6 +133,7 @@ static:
 	SDL_Window *window;
 	SDL_Renderer *render;
 	int[2] windowSize;
+	string windowTitle;
 	int fontSize;
 	string fontPath;
 	int scroll;
@@ -374,6 +375,14 @@ void loadConfigFile(string path, string scancodesPath)
 	theme.text = getTheme(cfg, "text-color", [240, 240, 240]);
 	theme.key = getTheme(cfg, "key-color", [251, 160, 192]);
 
+	// window title
+	ren.windowTitle = "Rennen";
+	if ("window-title" in cfg) {
+		if (cfg["window-title"].type != ObjType.STRING)
+			fail("Invalid string: " ~ cfg["window-title"].getObj);
+		ren.windowTitle = cfg["window-title"].base;
+	}
+
 	// window size
 	if ("window-width" in cfg) {
 		if (!isNumber(cfg["window-width"].getObj))
@@ -420,7 +429,7 @@ void main(string[] args)
 	
 	// Error handling? What's that?
 
-	ren.window = SDL_CreateWindow("Rennen",
+	ren.window = SDL_CreateWindow(ren.windowTitle.toStringz,
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			ren.windowSize[0], ren.windowSize[1],
 			// SDL_WINDOW_RESIZABLE |
