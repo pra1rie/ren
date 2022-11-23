@@ -1,7 +1,7 @@
 name "ren"
 description "Rennen."
 authors "Ren."
-sourcePaths "sauce"
+sourcePaths "sauce" "salka"
 copyright "Copyright © 2022, Ren."
 license "non"
 dependency "derelict-sdl2" version="~>2.1.4"

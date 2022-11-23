@@ -6,14 +6,26 @@ import std.algorithm : canFind, each;
 import std.conv : to;
 import std.process : spawnShell, wait;
 import core.stdc.stdlib : exit;
-import config;
+
+import salka;
 
 import derelict.sdl2.sdl;
 import derelict.sdl2.ttf;
 
-const string CONFIG_PATH = "config";
-const string SCANCODES_PATH = "scancodes";
+immutable string CONFIG_PATH = "config.sk";
+immutable string SCANCODES_PATH = "scancodes.sk";
 int[string] scancodes;
+
+void fail(string err)
+{
+	stderr.writeln("FAIL: " ~ err);
+	exit(1);
+}
+
+void warn(string err)
+{
+	stderr.writeln("WARN: " ~ err);
+}
 
 SDL_Scancode[] ignoredKeys = [
 	SDL_SCANCODE_LSHIFT,
@@ -297,19 +309,19 @@ ubyte[3] getTheme(Obj[string] vars, string key, ubyte[3] res)
 
 void loadConfigFile(string path, string scancodesPath)
 {
-	auto scum = loadConfig(scancodesPath);
-	foreach (var; scum.vars.byKeyValue) {
-		if (var.value.type == ObjType.INTEGER)
-			scancodes[var.key] = to!int(var.value.getObj);
+	auto keys = loadConfig(scancodesPath);
+	foreach (key; keys.byKeyValue) {
+		if (key.value.type == ObjType.INTEGER)
+			scancodes[key.key] = to!int(key.value.getObj);
 	}
 
 	auto cfg = loadConfig(path);
-	if (!("commands" in cfg.vars))
+	if (!("commands" in cfg))
 		fail("Variable does not exist: commands");
-	if (cfg.vars["commands"].type != ObjType.LIST)
+	if (cfg["commands"].type != ObjType.LIST)
 		fail("Variable must be a list");
 
-	foreach (item; cfg.vars["commands"].list) {
+	foreach (item; cfg["commands"].list) {
 		if (item.list.length != 3)
 			fail("Invalid command: " ~ item.getObj);
 
@@ -324,20 +336,20 @@ void loadConfigFile(string path, string scancodesPath)
 
 	// exit on key (on by default)
 	ren.exitOnKey = true;
-	if ("exit-on-key" in cfg.vars) {
-		if (!isNumber(cfg.vars["exit-on-key"].getObj))
-			fail("Invalid digit: " ~ cfg.vars["exit-on-key"].getObj);
-		ren.exitOnKey = (cfg.vars["exit-on-key"].getObj != "0");
+	if ("exit-on-key" in cfg) {
+		if (!isNumber(cfg["exit-on-key"].getObj))
+			fail("Invalid digit: " ~ cfg["exit-on-key"].getObj);
+		ren.exitOnKey = (cfg["exit-on-key"].getObj != "0");
 	}
 
 	// text spacing
 	ren.scroll = 0;
 	ren.spacing = 3;
 
-	if ("spacing" in cfg.vars) {
-		if (!isNumber(cfg.vars["spacing"].getObj))
-			fail("Invalid digit: " ~ cfg.vars["spacing"].getObj);
-		ren.spacing = to!int(cfg.vars["spacing"].getObj);
+	if ("spacing" in cfg) {
+		if (!isNumber(cfg["spacing"].getObj))
+			fail("Invalid digit: " ~ cfg["spacing"].getObj);
+		ren.spacing = to!int(cfg["spacing"].getObj);
 	}
 
 	int w = 640, h = 0;
@@ -345,37 +357,37 @@ void loadConfigFile(string path, string scancodesPath)
 	ren.fontPath = "font.ttf";
 
 	// font
-	if ("font-path" in cfg.vars) {
-		if (cfg.vars["font-path"].type != ObjType.STRING)
-			fail("Invalid string: " ~ cfg.vars["font-path"].getObj);
-		ren.fontPath = cfg.vars["font-path"].base;
+	if ("font-path" in cfg) {
+		if (cfg["font-path"].type != ObjType.STRING)
+			fail("Invalid string: " ~ cfg["font-path"].getObj);
+		ren.fontPath = cfg["font-path"].base;
 	}
-	if ("font-size" in cfg.vars) {
-		if (!isNumber(cfg.vars["font-size"].getObj))
-			fail("Invalid digit: " ~ cfg.vars["font-size"].getObj);
-		ren.fontSize = to!int(cfg.vars["font-size"].getObj);
+	if ("font-size" in cfg) {
+		if (!isNumber(cfg["font-size"].getObj))
+			fail("Invalid digit: " ~ cfg["font-size"].getObj);
+		ren.fontSize = to!int(cfg["font-size"].getObj);
 	}
 
 	// colours
-	theme.background = getTheme(cfg.vars, "background-color", [36, 36, 48]);
-	theme.command = getTheme(cfg.vars, "command-color", [102, 102, 102]);
-	theme.text = getTheme(cfg.vars, "text-color", [240, 240, 240]);
-	theme.key = getTheme(cfg.vars, "key-color", [251, 160, 192]);
+	theme.background = getTheme(cfg, "background-color", [36, 36, 48]);
+	theme.command = getTheme(cfg, "command-color", [102, 102, 102]);
+	theme.text = getTheme(cfg, "text-color", [240, 240, 240]);
+	theme.key = getTheme(cfg, "key-color", [251, 160, 192]);
 
 	// window size
-	if ("window-width" in cfg.vars) {
-		if (!isNumber(cfg.vars["window-width"].getObj))
-			fail("Invalid digit: " ~ cfg.vars["window-width"].getObj);
-		w = to!int(cfg.vars["window-width"].getObj);
+	if ("window-width" in cfg) {
+		if (!isNumber(cfg["window-width"].getObj))
+			fail("Invalid digit: " ~ cfg["window-width"].getObj);
+		w = to!int(cfg["window-width"].getObj);
 	}
-	if ("window-height" in cfg.vars) {
-		if (!isNumber(cfg.vars["window-height"].getObj))
-			fail("Invalid digit: " ~ cfg.vars["window-height"].getObj);
-		h = to!int(cfg.vars["window-height"].getObj);
+	if ("window-height" in cfg) {
+		if (!isNumber(cfg["window-height"].getObj))
+			fail("Invalid digit: " ~ cfg["window-height"].getObj);
+		h = to!int(cfg["window-height"].getObj);
 	}
 
 	if (!h)
-		h = to!int((cfg.vars["commands"].list.length+1) * (ren.fontSize + ren.spacing));
+		h = to!int((cfg["commands"].list.length+1) * (ren.fontSize + ren.spacing));
 	ren.windowSize = [w, h];
 }
 
