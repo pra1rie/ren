@@ -12,8 +12,8 @@ font-path: "JuliaMono.ttf"
 exit-on-key: 1
 window-width: 640
 
-background-color: [36, 36, 48]
-command-color: [102, 102, 102]
-text-color: [240, 240, 240]
-key-color: [251, 160, 192]
+background-color: "242430"
+command-color: "696969"
+text-color: "f0f0f0"
+key-color: "fba0c0"
 

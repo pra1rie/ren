@@ -123,22 +123,18 @@ static:
 	int[2] windowSize;
 	int fontSize;
 	string fontPath;
-
 	int scroll;
 	int spacing;
-
 	bool isScrolling;
 	bool exitOnKey;
 	Font font;
 	Cmd[] cmds;
 }
 
-const static size_t FPS = 60;
-
 bool getKey(SDL_Scancode key)
 {
 	const ubyte *state = SDL_GetKeyboardState(null);
-	return state[key]? true : false;
+	return state[key] != 0;
 }
 
 void events()
@@ -241,13 +237,45 @@ void update()
 	SDL_RenderPresent(ren.render);
 }
 
+ubyte hexToDec(string col)
+{
+	ubyte res = 0;
+	for (size_t i = 0; i < col.length; ++i) {
+		auto j = (col.length-1) - i;
+		if (col[j] >= 'a' && col[j] <= 'f') {
+			res += (col[j] - 'a' + 10) * (16 ^^ i);
+		}
+		else if (col[j] >= '0' && col[j] <= '9') {
+			res += (col[j] - '0') * (16 ^^ i);
+		}
+		else {
+			fail("Invalid color: " ~ col);
+		}
+	}
+	return res;
+}
+
 ubyte[3] getTheme(Obj[string] vars, string key, ubyte[3] res)
 {
 	ubyte[3] color;
-
-	// TODO: maybe support colours in hex as well
 	if (key in vars) {
 		auto col = vars[key];
+
+		if (col.type == ObjType.STRING) {
+			if (col.base.length < 6) {
+				warn("Invalid color: " ~ col.getObj);
+				return res;
+			}
+
+			auto offset = (col.base[0] == '#')? 1 : 0;
+			color = [
+				hexToDec(col.base[0+offset..2+offset]),
+				hexToDec(col.base[2+offset..4+offset]),
+				hexToDec(col.base[4+offset..6+offset]),
+			];
+			return color;
+		}
+
 		if (col.type != ObjType.LIST || col.list.length < 3) {
 			warn("Invalid color: " ~ col.getObj);
 			return res;
@@ -362,6 +390,8 @@ void quit()
 
 void main(string[] args)
 {
+	// ROFI CAN SUCK MY DICK-
+
 	if (args.length < 2) {
 		writeln("Usage:");
 		writeln("  ", args[0], " <path to config files>");
@@ -381,9 +411,9 @@ void main(string[] args)
 	ren.window = SDL_CreateWindow("Rennen",
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			ren.windowSize[0], ren.windowSize[1],
-			SDL_WINDOW_RESIZABLE
-			| SDL_WINDOW_INPUT_FOCUS
-			| SDL_WINDOW_ALWAYS_ON_TOP);
+			// SDL_WINDOW_RESIZABLE |
+			SDL_WINDOW_INPUT_FOCUS |
+			SDL_WINDOW_ALWAYS_ON_TOP);
 	// make sure its focused ~ hopefully that's how it works
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
 	ren.font = new Font(path ~ "/" ~ ren.fontPath, ren.fontSize);
@@ -392,6 +422,6 @@ void main(string[] args)
 
 	while (true) {
 		events();
-		SDL_Delay(1000 / FPS);
+		SDL_Delay(12);
 	}
 }
