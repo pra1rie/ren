@@ -12,6 +12,9 @@ import salka;
 import derelict.sdl2.sdl;
 import derelict.sdl2.ttf;
 
+// can't i use nara?
+// also can this be done in C?
+
 immutable string CONFIG_PATH = "config.sk";
 immutable string SCANCODES_PATH = "scancodes.sk";
 int[string] scancodes;
@@ -191,8 +194,7 @@ void events()
 						++ren.scroll;
 					}
 					if (key == SDL_SCANCODE_UP) {
-						--ren.scroll;
-						if (ren.scroll <= 0)
+						if (--ren.scroll < 0)
 							ren.scroll = 0;
 					}
 				}
@@ -211,8 +213,6 @@ void events()
 			}
 			default: break;
 		}
-		// redraw at every event
-		update();
 	}
 }
 
@@ -252,6 +252,7 @@ void update()
 
 ubyte hexToDec(string col)
 {
+	// bruh.
 	ubyte res = 0;
 	for (size_t i = 0; i < col.length; ++i) {
 		auto j = (col.length-1) - i;
@@ -310,6 +311,7 @@ ubyte[3] getTheme(Obj[string] vars, string key, ubyte[3] res)
 
 void loadConfigFile(string path, string scancodesPath)
 {
+	// TODO: i kinda hate this; should i hardcode scancodes?
 	auto keys = loadConfig(scancodesPath);
 	foreach (key; keys.byKeyValue) {
 		if (key.value.type == ObjType.INTEGER)
@@ -412,7 +414,6 @@ void quit()
 void main(string[] args)
 {
 	// ROFI CAN SUCK MY DICK-
-
 	if (args.length < 2) {
 		writeln("Usage:");
 		writeln("  ", args[0], " <path to config files>");
@@ -432,16 +433,12 @@ void main(string[] args)
 	ren.window = SDL_CreateWindow(ren.windowTitle.toStringz,
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			ren.windowSize[0], ren.windowSize[1],
-			// SDL_WINDOW_RESIZABLE |
-			SDL_WINDOW_INPUT_FOCUS |
-			SDL_WINDOW_ALWAYS_ON_TOP);
-	// make sure its focused ~ hopefully that's how it works
+			SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_ALWAYS_ON_TOP);
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
 	ren.font = new Font(path ~ "/" ~ ren.fontPath, ren.fontSize);
 
-	update();
-
 	while (true) {
+		update();
 		events();
 		SDL_Delay(12);
 	}

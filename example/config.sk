@@ -1,9 +1,9 @@
 commands: [
-	["quit", "killall ren", "Q"],
-	["volume", "kitty alsamixer -c 1", "V"],
-	["brave", "brave-browser", "B"],
-	["gimp", "gimp", "G"],
-	["terminal", "kitty", "T"],
+	["quit",     "killall ren",          "Q"],
+	["volume",   "kitty alsamixer -c 1", "V"],
+	["brave",    "brave-browser",        "B"],
+	["gimp",     "gimp",                 "G"],
+	["terminal", "kitty",                "T"],
 ]
 
 font-size: 24
@@ -12,8 +12,8 @@ font-path: "JuliaMono.ttf"
 exit-on-key: 1
 window-width: 640
 
-background-color: "242430"
-command-color: "696969"
-text-color: "f0f0f0"
-key-color: "fba0c0"
+background-color:  "#242430"
+command-color:     "#696969"
+text-color:        "#fafafa"
+key-color:         "#fba0c0"
 
