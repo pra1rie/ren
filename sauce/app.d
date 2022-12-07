@@ -1,12 +1,13 @@
 import std.stdio;
 import std.string : toStringz;
 import std.file : exists, isDir, readText;
-import std.array : split;
+import std.array : split, join;
 import std.algorithm : canFind, each;
 import std.conv : to;
 import std.process : spawnShell, wait;
 import core.stdc.stdlib : exit;
 
+import ren_scancodes;
 import salka;
 
 import derelict.sdl2.sdl;
@@ -15,9 +16,7 @@ import derelict.sdl2.ttf;
 // can't i use nara?
 // also can this be done in C?
 
-immutable string CONFIG_PATH = "config.sk";
-immutable string SCANCODES_PATH = "scancodes.sk";
-int[string] scancodes;
+string path;
 
 void fail(string err)
 {
@@ -309,15 +308,8 @@ ubyte[3] getTheme(Obj[string] vars, string key, ubyte[3] res)
 	return res;
 }
 
-void loadConfigFile(string path, string scancodesPath)
+void loadConfigFile(string path)
 {
-	// TODO: i kinda hate this; should i hardcode scancodes?
-	auto keys = loadConfig(scancodesPath);
-	foreach (key; keys.byKeyValue) {
-		if (key.value.type == ObjType.INTEGER)
-			scancodes[key.key] = to!int(key.value.getObj);
-	}
-
 	auto cfg = loadConfig(path);
 	if (!("commands" in cfg))
 		fail("Variable does not exist: commands");
@@ -420,8 +412,20 @@ void main(string[] args)
 		exit(0);
 	}
 	
-	string path = args[1];
-	loadConfigFile(path ~ "/" ~ CONFIG_PATH, path ~ "/" ~ SCANCODES_PATH);
+	path = args[1];
+	if (path.isDir) {
+	path = args[1];
+		loadConfigFile(path ~ "/config.sk");
+	}
+	else {
+		loadConfigFile(path);
+		// extract whole path except for config file
+		path = path.split("/")[0..$-1].join("/");
+	}
+
+	// if it can't find then it can't find. ain't gonna look elsewhere >:c
+	if (!ren.fontPath.exists)
+		ren.fontPath = path ~ "/" ~ ren.fontPath;
 
 	DerelictSDL2.load();
 	DerelictSDL2ttf.load();
@@ -435,7 +439,7 @@ void main(string[] args)
 			ren.windowSize[0], ren.windowSize[1],
 			SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_ALWAYS_ON_TOP);
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
-	ren.font = new Font(path ~ "/" ~ ren.fontPath, ren.fontSize);
+	ren.font = new Font(ren.fontPath, ren.fontSize);
 
 	while (true) {
 		update();
