@@ -1,0 +1,3 @@
+[submodule "salka"]
+	path = salka
+	url = https://github.com/pra1rie/salka
