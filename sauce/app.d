@@ -408,7 +408,7 @@ void main(string[] args)
 	// ROFI CAN SUCK MY DICK-
 	if (args.length < 2) {
 		writeln("Usage:");
-		writeln("  ", args[0], " <path to config files>");
+		writeln("  ", args[0], " <path to config file>");
 		exit(0);
 	}
 	

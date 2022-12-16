@@ -2,7 +2,7 @@
 
 A super fancyn't command launcher thingy
 
-![Screenshot](https://i.imgur.com/zxqUOTA.png)
+![Screenshot](https://i.imgur.com/D44mFog.png)
 
 ## Usage
 ```console
