@@ -16,8 +16,6 @@ import derelict.sdl2.ttf;
 // can't i use nara?
 // also can this be done in C?
 
-string path;
-
 void fail(string err)
 {
 	stderr.writeln("FAIL: " ~ err);
@@ -412,9 +410,9 @@ void main(string[] args)
 		exit(0);
 	}
 	
-	path = args[1];
+	string path = args[1];
 	if (path.isDir) {
-	path = args[1];
+		path = args[1];
 		loadConfigFile(path ~ "/config.sk");
 	}
 	else {
