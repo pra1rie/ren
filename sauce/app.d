@@ -321,7 +321,10 @@ void loadConfigFile(string path)
 		if (!isNumber(item.list[2].base) && !(item.list[2].base in scancodes))
 			fail("Invalid key: " ~ item.list[2].base);
 
-		int key = (item.list[2].base.isNumber)?
+		if (![ObjType.INTEGER, ObjType.STRING].canFind(item.list[2].type))
+			fail("Invalid key: " ~ item.list[2].getObj);
+
+		int key = (item.list[2].type == ObjType.INTEGER)?
 				to!int(item.list[2].base) : scancodes[item.list[2].base];
 
 		ren.cmds ~= Cmd(item.list[0].base, item.list[1].base, key, item.list[2].base);
