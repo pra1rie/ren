@@ -13,9 +13,6 @@ import salka;
 import derelict.sdl2.sdl;
 import derelict.sdl2.ttf;
 
-// can't i use nara?
-// also can this be done in C?
-
 void fail(string err)
 {
 	stderr.writeln("FAIL: " ~ err);
@@ -46,9 +43,9 @@ SDL_Scancode[] ignoredKeys = [
 class Font {
 	int size;
 	SDL_Rect rect;
+
 	private TTF_Font *_font;
 	private SDL_Surface *_surf;
-	private SDL_Texture *_text;
 
 	this(string t_path, int t_size)
 	{
@@ -60,55 +57,47 @@ class Font {
 	void write(string text, int[2] pos, ubyte[3] col = [240, 240, 240])
 	{
 		if (text == "") return;
-		renderTextToMySurface(text, col);
+		renderText(text, col);
 		rect = SDL_Rect(pos[0], pos[1], _surf.w, _surf.h);
-		renderAndFreeMyTexture();
+		blitSurface();
 	}
 
+	// I forgot to use this function
 	void writeCentered(string text, int[2] pos, ubyte[3] col = [240, 240, 240])
 	{
 		if (text == "") return;
-		renderTextToMySurface(text, col);
+		renderText(text, col);
 		rect = SDL_Rect(
 				pos[0] - (_surf.w/2),
 				pos[1] - (_surf.h/2),
 				_surf.w,
-				_surf.h
-			);
-		renderAndFreeMyTexture();
+				_surf.h);
+		blitSurface();
 	}
 	
 	void writeRight(string text, int[2] pos, ubyte[3] col = [240, 240, 240])
 	{
 		if (text == "") return;
-		renderTextToMySurface(text, col);
+		renderText(text, col);
 		rect = SDL_Rect(
 				pos[0] - _surf.w,
 				pos[1],
 				_surf.w,
-				_surf.h
-			);
-		renderAndFreeMyTexture();
+				_surf.h);
+		blitSurface();
 	}
 
-	private void renderAndFreeMyTexture()
+	private void renderText(string text, ubyte[3] col)
 	{
-		SDL_RenderCopy(ren.render, _text, null, &rect);
+		SDL_Color c = SDL_Color(col[0], col[1], col[2]);
+		_surf = TTF_RenderUTF8_Blended(_font, text.toStringz, c);
+	}
+
+	private void blitSurface()
+	{
+		if (!_surf) return;
+		SDL_BlitSurface(_surf, null, ren.surface, &rect);
 		SDL_FreeSurface(_surf);
-		SDL_DestroyTexture(_text);
-	}
-
-	private void renderTextToMySurface(string text, ubyte[3] col)
-	{
-		// getting colours
-		SDL_Color c0 = SDL_Color(col[0], col[1], col[2]);
-		SDL_Color c1;
-		SDL_GetRenderDrawColor(ren.render, &c1.r, &c1.g, &c1.b, null);
-
-		// rendering text to a surface
-		_surf = TTF_RenderText_Shaded(_font, text.toStringz, c0, c1);
-		// creating a texture from that surface
-		_text = SDL_CreateTextureFromSurface(ren.render, _surf);
 	}
 }
 
@@ -128,10 +117,11 @@ static:
 	ubyte[3] key;
 }
 
-static struct ren {
+struct ren {
 static:
 	SDL_Window *window;
 	SDL_Renderer *render;
+	SDL_Surface *surface;
 	int[2] windowSize;
 	string windowTitle;
 	int fontSize;
@@ -160,9 +150,14 @@ void events()
 				quit();
 				break;
 			}
+			// ren is actually not supposed to be resizable, but there's always
+			// a bitchass window manager to fuck everything up
 			case SDL_WINDOWEVENT: {
 				if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
 					ren.windowSize = [e.window.data1, e.window.data2];
+					SDL_FreeSurface(ren.surface);
+					ren.surface = SDL_CreateRGBSurface(
+							0, ren.windowSize[0], ren.windowSize[1], 32, 0, 0, 0, 0);
 				}
 				break;
 			}
@@ -215,36 +210,28 @@ void events()
 
 void update()
 {
-	SDL_SetRenderDrawColor(ren.render,
-			theme.background[0], theme.background[1], theme.background[2], 0);
-	SDL_RenderClear(ren.render);
+	SDL_FillRect(ren.surface, null, SDL_MapRGB(ren.surface.format,
+				theme.background[0], theme.background[1], theme.background[2]));
 	
-	// TODO: no need to draw outside screen
-
 	for (int i = 0; i < ren.cmds.length; ++i) {
+		int y = ren.spacing + (i - ren.scroll) * (ren.font.size + ren.spacing);
+		if (y < 0 || y > ren.windowSize[1]) continue;
 		// write key
 		ren.font.writeRight(" [" ~ ren.cmds[i].key_name ~ "] ",
-				[
-					ren.windowSize[0],
-					ren.spacing + (i - ren.scroll) * (ren.font.size + ren.spacing)
-				], theme.key);
+				[ren.windowSize[0], y], theme.key);
 
 		// write command
 		ren.font.writeRight(ren.cmds[i].cmd,
-				[
-					ren.windowSize[0] - ren.font.rect.w,
-					ren.spacing + (i - ren.scroll) * (ren.font.size + ren.spacing)
-				], theme.command);
+				[ren.windowSize[0] - ren.font.rect.w, y], theme.command);
 	
 		// write name
-		ren.font.write(" " ~ ren.cmds[i].name,
-				[
-					0,
-					ren.spacing + (i - ren.scroll) * (ren.font.size + ren.spacing)
-				], theme.text);
+		ren.font.write(" " ~ ren.cmds[i].name, [0, y], theme.text);
 	}
 
+	SDL_Texture *texture = SDL_CreateTextureFromSurface(ren.render, ren.surface);
+	SDL_RenderCopy(ren.render, texture, null, null);
 	SDL_RenderPresent(ren.render);
+	SDL_DestroyTexture(texture);
 }
 
 ubyte hexToDec(string col)
@@ -397,6 +384,7 @@ void loadConfigFile(string path)
 
 void quit()
 {
+	SDL_FreeSurface(ren.surface);
 	SDL_DestroyRenderer(ren.render);
 	SDL_DestroyWindow(ren.window);
 	TTF_Quit();
@@ -424,7 +412,7 @@ void main(string[] args)
 		path = path.split("/")[0..$-1].join("/");
 	}
 
-	// if it can't find then it can't find. ain't gonna look elsewhere >:c
+	// TODO: look for system fonts
 	if (!ren.fontPath.exists)
 		ren.fontPath = path ~ "/" ~ ren.fontPath;
 
@@ -434,13 +422,14 @@ void main(string[] args)
 	TTF_Init();
 	
 	// Error handling? What's that?
-
 	ren.window = SDL_CreateWindow(ren.windowTitle.toStringz,
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			ren.windowSize[0], ren.windowSize[1],
 			SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_ALWAYS_ON_TOP);
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
 	ren.font = new Font(ren.fontPath, ren.fontSize);
+	ren.surface = SDL_CreateRGBSurface(
+			0, ren.windowSize[0], ren.windowSize[1], 32, 0, 0, 0, 0);
 
 	while (true) {
 		update();
