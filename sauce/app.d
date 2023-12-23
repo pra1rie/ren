@@ -146,64 +146,66 @@ void events()
 	SDL_Event e;
 	if (SDL_PollEvent(&e)) {
 		switch (e.type) {
-			case SDL_QUIT: {
+		case SDL_QUIT: {
+			quit();
+			break;
+		}
+		// ren is actually not supposed to be resizable, but there's always
+		// a bitchass window manager to fuck everything up
+		case SDL_WINDOWEVENT: {
+			if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
+				ren.windowSize = [e.window.data1, e.window.data2];
+				SDL_FreeSurface(ren.surface);
+				ren.surface = SDL_CreateRGBSurface(
+						0, ren.windowSize[0], ren.windowSize[1], 32, 0, 0, 0, 0);
+			}
+			break;
+		}
+		case SDL_MOUSEWHEEL: {
+			ren.scroll -= e.wheel.y;
+			if (ren.scroll < 0) ren.scroll = 0;
+			break;
+		}
+		case SDL_KEYUP: {
+			auto key = e.key.keysym.scancode;
+			if (key == SDL_SCANCODE_LSHIFT)
+				ren.isScrolling = false;
+			break;
+		}
+		case SDL_KEYDOWN: {
+			auto key = e.key.keysym.scancode;
+			if (key == SDL_SCANCODE_ESCAPE)
 				quit();
-				break;
-			}
-			// ren is actually not supposed to be resizable, but there's always
-			// a bitchass window manager to fuck everything up
-			case SDL_WINDOWEVENT: {
-				if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
-					ren.windowSize = [e.window.data1, e.window.data2];
-					SDL_FreeSurface(ren.surface);
-					ren.surface = SDL_CreateRGBSurface(
-							0, ren.windowSize[0], ren.windowSize[1], 32, 0, 0, 0, 0);
+
+			// scrolling
+			if (key == SDL_SCANCODE_LSHIFT)
+				ren.isScrolling = true;
+
+			if (ren.isScrolling) {
+				if (key == SDL_SCANCODE_DOWN) {
+					++ren.scroll;
 				}
-				break;
-			}
-			case SDL_MOUSEWHEEL: {
-				ren.scroll -= e.wheel.y;
-				if (ren.scroll < 0) ren.scroll = 0;
-				break;
-			}
-			case SDL_KEYUP: {
-				auto key = e.key.keysym.scancode;
-				if (key == SDL_SCANCODE_LSHIFT)
-					ren.isScrolling = false;
-				break;
-			}
-			case SDL_KEYDOWN: {
-				auto key = e.key.keysym.scancode;
-				if (key == SDL_SCANCODE_ESCAPE)
-					quit();
-
-				// scrolling
-				if (key == SDL_SCANCODE_LSHIFT)
-					ren.isScrolling = true;
-
-				if (ren.isScrolling) {
-					if (key == SDL_SCANCODE_DOWN) {
-						++ren.scroll;
-					}
-					if (key == SDL_SCANCODE_UP) {
-						if (--ren.scroll < 0)
-							ren.scroll = 0;
-					}
+				if (key == SDL_SCANCODE_UP) {
+					if (--ren.scroll < 0)
+						ren.scroll = 0;
 				}
-
-				// cmd keys
-				if (ignoredKeys.canFind(key)) break;
-
-				foreach (cmd; ren.cmds) {
-					if (key == cmd.key) {
-						spawnShell(cmd.cmd ~ " &").wait;
-						if (ren.exitOnKey)
-							quit();
-					}
-				}
+				// Don't accept arrow keys when scrolling
 				break;
 			}
-			default: break;
+
+			// cmd keys
+			if (ignoredKeys.canFind(key)) break;
+
+			foreach (cmd; ren.cmds) {
+				if (key == cmd.key) {
+					spawnShell(cmd.cmd ~ " &").wait;
+					if (ren.exitOnKey)
+						quit();
+				}
+			}
+			break;
+		}
+		default: break;
 		}
 	}
 }
@@ -215,7 +217,10 @@ void update()
 	
 	for (int i = 0; i < ren.cmds.length; ++i) {
 		int y = ren.spacing + (i - ren.scroll) * (ren.font.size + ren.spacing);
-		if (y < 0 || y > ren.windowSize[1]) continue;
+
+		if (y < 0 || y > ren.windowSize[1])
+			continue;
+
 		// write key
 		ren.font.writeRight(" [" ~ ren.cmds[i].key_name ~ "] ",
 				[ren.windowSize[0], y], theme.key);
