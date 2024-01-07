@@ -245,7 +245,10 @@ ubyte hexToDec(string col)
 	ubyte res = 0;
 	for (size_t i = 0; i < col.length; ++i) {
 		auto j = (col.length-1) - i;
-		if (col[j] >= 'a' && col[j] <= 'f') {
+		if (col[j] >= 'A' && col[j] <= 'F') {
+			res += (col[j] - 'A' + 10) * (16 ^^ i);
+		}
+		else if (col[j] >= 'a' && col[j] <= 'f') {
 			res += (col[j] - 'a' + 10) * (16 ^^ i);
 		}
 		else if (col[j] >= '0' && col[j] <= '9') {
