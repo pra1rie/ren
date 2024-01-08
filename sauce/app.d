@@ -13,6 +13,18 @@ import salka;
 import derelict.sdl2.sdl;
 import derelict.sdl2.ttf;
 
+const int
+		RMASK = 0xff000000,
+		GMASK = 0x00ff0000,
+		BMASK = 0x0000ff00,
+		AMASK = 0x000000ff;
+
+struct flags
+{
+static:
+	bool runCommand = true;
+}
+
 void fail(string err)
 {
 	stderr.writeln("FAIL: " ~ err);
@@ -54,7 +66,7 @@ class Font {
 		rect = SDL_Rect(0, 0, size, size);
 	}
 
-	void write(string text, int[2] pos, ubyte[3] col = [240, 240, 240])
+	void write(string text, int[2] pos, SDL_Color col)
 	{
 		if (text == "") return;
 		renderText(text, col);
@@ -63,7 +75,7 @@ class Font {
 	}
 
 	// I forgot to use this function
-	void writeCentered(string text, int[2] pos, ubyte[3] col = [240, 240, 240])
+	void writeCentered(string text, int[2] pos, SDL_Color col)
 	{
 		if (text == "") return;
 		renderText(text, col);
@@ -75,7 +87,7 @@ class Font {
 		blitSurface();
 	}
 	
-	void writeRight(string text, int[2] pos, ubyte[3] col = [240, 240, 240])
+	void writeRight(string text, int[2] pos, SDL_Color col)
 	{
 		if (text == "") return;
 		renderText(text, col);
@@ -87,10 +99,9 @@ class Font {
 		blitSurface();
 	}
 
-	private void renderText(string text, ubyte[3] col)
+	private void renderText(string text, SDL_Color col)
 	{
-		SDL_Color c = SDL_Color(col[0], col[1], col[2]);
-		_surf = TTF_RenderUTF8_Blended(_font, text.toStringz, c);
+		_surf = TTF_RenderUTF8_Blended(_font, text.toStringz, col);
 	}
 
 	private void blitSurface()
@@ -108,13 +119,12 @@ struct Cmd {
 	string key_name;
 }
 
-// uh i could use SDL_Color, right? right?
 struct theme {
 static:
-	ubyte[3] background;
-	ubyte[3] command;
-	ubyte[3] text;
-	ubyte[3] key;
+	SDL_Color background;
+	SDL_Color command;
+	SDL_Color text;
+	SDL_Color key;
 }
 
 struct ren {
@@ -157,7 +167,8 @@ void events()
 				ren.windowSize = [e.window.data1, e.window.data2];
 				SDL_FreeSurface(ren.surface);
 				ren.surface = SDL_CreateRGBSurface(
-						0, ren.windowSize[0], ren.windowSize[1], 32, 0, 0, 0, 0);
+						0, ren.windowSize[0], ren.windowSize[1], 32,
+						RMASK, GMASK, BMASK, AMASK);
 			}
 			break;
 		}
@@ -198,7 +209,10 @@ void events()
 
 			foreach (cmd; ren.cmds) {
 				if (key == cmd.key) {
-					spawnShell(cmd.cmd ~ " &").wait;
+					if (flags.runCommand)
+						spawnShell(cmd.cmd ~ " &").wait;
+					else
+						writeln(cmd.cmd);
 					if (ren.exitOnKey)
 						quit();
 				}
@@ -212,8 +226,12 @@ void events()
 
 void update()
 {
-	SDL_FillRect(ren.surface, null, SDL_MapRGB(ren.surface.format,
-				theme.background[0], theme.background[1], theme.background[2]));
+	SDL_FillRect(ren.surface, null,
+			SDL_MapRGBA(ren.surface.format,
+				theme.background.r,
+				theme.background.g,
+				theme.background.b,
+				theme.background.a));
 	
 	for (int i = 0; i < ren.cmds.length; ++i) {
 		int y = ren.spacing + (i - ren.scroll) * (ren.font.size + ren.spacing);
@@ -261,9 +279,9 @@ ubyte hexToDec(string col)
 	return res;
 }
 
-ubyte[3] getTheme(Obj[string] vars, string key, ubyte[3] res)
+SDL_Color getTheme(Obj[string] vars, string key, SDL_Color res)
 {
-	ubyte[3] color;
+	SDL_Color color;
 	if (key in vars) {
 		auto col = vars[key];
 
@@ -274,11 +292,12 @@ ubyte[3] getTheme(Obj[string] vars, string key, ubyte[3] res)
 			}
 
 			auto offset = (col.base[0] == '#')? 1 : 0;
-			color = [
+			color = SDL_Color(
 				hexToDec(col.base[0+offset..2+offset]),
 				hexToDec(col.base[2+offset..4+offset]),
 				hexToDec(col.base[4+offset..6+offset]),
-			];
+				(col.base.length >= 8?
+					hexToDec(col.base[6+offset..8+offset]) : 0xff));
 			return color;
 		}
 
@@ -287,14 +306,17 @@ ubyte[3] getTheme(Obj[string] vars, string key, ubyte[3] res)
 			return res;
 		}
 		
-		foreach (i; 0..3) {
+		foreach (i; 0..col.list.length) {
 			if (!isNumber(col.list[i].getObj)) {
 				warn("Invalid digit: " ~ col.list[i].getObj);
 				return res;
 			}
-
-			color[i] = to!ubyte(col.list[i].getObj);
 		}
+		color = SDL_Color(
+			to!ubyte(col.list[0].getObj),
+			to!ubyte(col.list[1].getObj),
+			to!ubyte(col.list[2].getObj),
+			(col.list.length == 4? to!ubyte(col.list[3].getObj) : 0xff));
 		return color;
 	}
 
@@ -360,10 +382,10 @@ void loadConfigFile(string path)
 	}
 
 	// colours
-	theme.background = getTheme(cfg, "background-color", [36, 36, 48]);
-	theme.command = getTheme(cfg, "command-color", [102, 102, 102]);
-	theme.text = getTheme(cfg, "text-color", [240, 240, 240]);
-	theme.key = getTheme(cfg, "key-color", [251, 160, 192]);
+	theme.background = getTheme(cfg, "background-color", SDL_Color(36, 36, 48, 255));
+	theme.command = getTheme(cfg, "command-color", SDL_Color(102, 102, 102, 255));
+	theme.text = getTheme(cfg, "text-color", SDL_Color(240, 240, 240, 255));
+	theme.key = getTheme(cfg, "key-color", SDL_Color(251, 160, 192, 255));
 
 	// window title
 	ren.windowTitle = "Rennen";
@@ -408,8 +430,19 @@ void main(string[] args)
 		writeln("  ", args[0], " <path to config file>");
 		exit(0);
 	}
+
+	string path;
+	foreach (arg; args) {
+		switch (arg) {
+		case "-norun":
+			flags.runCommand = false;
+			break;
+		default:
+			path = arg;
+			break;
+		}
+	}
 	
-	string path = args[1];
 	if (path.isDir) {
 		path = args[1];
 		loadConfigFile(path ~ "/config.sk");
@@ -436,8 +469,14 @@ void main(string[] args)
 			SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_ALWAYS_ON_TOP);
 	ren.render = SDL_CreateRenderer(ren.window, -1, SDL_RENDERER_ACCELERATED);
 	ren.font = new Font(ren.fontPath, ren.fontSize);
+
 	ren.surface = SDL_CreateRGBSurface(
-			0, ren.windowSize[0], ren.windowSize[1], 32, 0, 0, 0, 0);
+			0, ren.windowSize[0], ren.windowSize[1], 32,
+			RMASK, GMASK, BMASK, AMASK);
+
+	// Can't quite figure out how to draw transparent background
+	// without it affecting the text
+	/* SDL_SetWindowOpacity(ren.window, to!float(theme.background.a) / 255); */
 
 	while (true) {
 		update();
